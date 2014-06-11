@@ -8,7 +8,6 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import android.content.Intent;
-import android.content.res.Configuration;
 import android.os.Bundle;
 import android.support.v7.app.ActionBarActivity;
 import android.util.Log;
@@ -16,19 +15,26 @@ import android.view.View;
 import android.webkit.CookieManager;
 import android.webkit.CookieSyncManager;
 import android.widget.AdapterView;
-import android.widget.ArrayAdapter;
+import android.widget.AdapterView.OnItemClickListener;
 import android.widget.Button;
 import android.widget.ListView;
 
+import com.example.api.Group;
 import com.example.api.JSONAsynkTask;
+import com.example.api.NewsItem;
+import com.example.api.User;
 
-public class ListNews extends ActionBarActivity{
-	
-	String user_id, access_token,text;
+public class ListNews extends ActionBarActivity implements OnItemClickListener {
+
+	String user_id, access_token;
 	ListView lvMain;
 	Button refresh,logout;
-	ArrayAdapter<String> adapter;
+	NewsAdaprer adapter;
 	JSONObject jSONObject;
+	
+	public ArrayList<NewsItem> items;
+    public ArrayList<User> profiles;
+    public ArrayList<Group> groups;
 	
 	public void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
@@ -41,12 +47,9 @@ public class ListNews extends ActionBarActivity{
 		logout=(Button)findViewById(R.id.logout);
 		refresh=(Button)findViewById(R.id.refresh);
 		lvMain=(ListView)findViewById(R.id.lvMain);
+		lvMain.setOnItemClickListener(this);
 		
 		con();
-	}
-	
-	public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-		next(id);
 	}
 	
 	public String url(Object... par) {
@@ -64,22 +67,40 @@ public class ListNews extends ActionBarActivity{
 		}
 	}
 	
-	public void resultCon(JSONObject result) throws JSONException {
+	public ListNews resultCon(JSONObject result) throws JSONException {
 
-		ArrayList<String> items = new ArrayList<String>();
-		JSONArray itemsArray = result.getJSONArray("items");
-		for (int i = 0; i < itemsArray.length(); i++) {
-			JSONObject jitems = itemsArray.getJSONObject(i);
-			text = jitems.getString("text");
-			String n = new String(text);
-			items.add(n);
-
-		}
-		adapter = new ArrayAdapter<String>(this,
-				android.R.layout.simple_list_item_1, items);
-
+		JSONArray jitems = result.getJSONArray("items");
+		JSONArray jprofiles = result.getJSONArray("profiles");
+        JSONArray jgroups = result.getJSONArray("groups");
+        ListNews newsfeed = new ListNews();
+        if (jitems != null) {
+            newsfeed.items = new ArrayList<NewsItem>();
+            for(int i = 0; i < jitems.length(); i++) {
+                JSONObject jitem = (JSONObject)jitems.get(i);
+                NewsItem newsitem = NewsItem.parse(jitem);
+                newsfeed.items.add(newsitem);
+            }
+        }
+        
+        if (jprofiles != null) {
+            newsfeed.profiles = new ArrayList<User>();
+            for(int i = 0; i < jprofiles.length(); i++) {
+                JSONObject jprofile = (JSONObject)jprofiles.get(i);
+                User m = User.parseFromNews(jprofile);
+                newsfeed.profiles.add(m);
+            }
+        }
+        if (jgroups != null)
+            newsfeed.groups = new ArrayList<Group>();
+        	for(int i = 0; i < jgroups.length(); i++) {
+        	JSONObject jgroup = (JSONObject)jgroups.get(i);
+        	Group g = Group.parseGroups(jgroup);
+        	newsfeed.groups.add(g);
+        	}
+        	
+        NewsAdaprer adapter = new NewsAdaprer(this, newsfeed);
 		lvMain.setAdapter(adapter);
-
+		return newsfeed;
 	}
 	
 	public void logout(View v) {
@@ -97,20 +118,21 @@ public class ListNews extends ActionBarActivity{
     	lvMain.smoothScrollToPosition(0);
 		con();
 	}
-
-	public void onConfigurationChanged(Configuration newConfig) {
-		super.onConfigurationChanged(newConfig);
+	
+	public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+		String text = parent.getItemAtPosition(position).toString();
+		next(text);
 	}
 	
-	public boolean next(Object... par) {
-
+	
+	public boolean next(String text) {
+		
 		Intent intent = new Intent();
-		intent.putExtra("user_id", user_id);
 		intent.putExtra("access_token", access_token);
-		intent.putExtra("aid",(Long) par[0]);
+		intent.putExtra("post",text);
 		intent.setClass(getApplicationContext(), News.class);
 		startActivity(intent);
 		return true;
-
 	}
+
 }
