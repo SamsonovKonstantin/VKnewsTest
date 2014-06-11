@@ -1,8 +1,10 @@
 package com.example.api;
 
+
 public class Auth {
     
     public static String redirect_url="https://oauth.vk.com/blank.html";
+    
     public static String getUrl(String api_id, String settings){
         String url="https://oauth.vk.com/authorize?client_id="+api_id+"&display=mobile&scope="+settings+"&redirect_uri="+redirect_url+"&response_type=token"
                 +"&v=5.21";
